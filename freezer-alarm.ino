@@ -13,7 +13,7 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 5000
 #define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.0"
+#define FIRMWARE_VERSION "-1.01"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_VERSION_PUB "sensor/freezer-alarm/version"
@@ -119,7 +119,7 @@ void checkDoorState() {
   }  
 
   client.publish(MQTT_CHEST_POSITION_TOPIC, chest_position.c_str(), true);
-  client.publish(MQTT_UPRIGHT_POSITION_TOPIC, chest_position.c_str(), true);
+  client.publish(MQTT_UPRIGHT_POSITION_TOPIC, upright_position.c_str(), true);
 }
 
 void doorStateTickerFunc() {

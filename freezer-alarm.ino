@@ -13,16 +13,16 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 5000
 #define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.01"
+#define FIRMWARE_VERSION "-1.15"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
-#define MQTT_VERSION_PUB "sensor/freezer-alarm/version"
-#define MQTT_COMPILE_PUB "sensor/freezer-alarm/compile"
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
 #define MQTT_HEARTBEAT_TOPIC "heartbeat"
-#define MQTT_HEARTBEAT_PUB "mqtt/freezer-alarm/heartbeat"
 #define MQTT_CHEST_POSITION_TOPIC "sensor/freezer-alarm/chest-position"
 #define MQTT_UPRIGHT_POSITION_TOPIC "sensor/freezer-alarm/upright-position"
+#define MQTT_DISCOVERY_BINARY_SENSOR_PREFIX  "homeassistant/binary_sensor/"
+#define MQTT_DISCOVERY_SENSOR_PREFIX  "homeassistant/sensor/"
+#define HA_TELEMETRY                         "ha"
 
 #define WATCHDOG_PIN 5       //  D1
 #define DOOR_CHEST_PIN 13    // D7
@@ -41,6 +41,7 @@ Ticker ticker_fw, tickerDoorState;
 
 bool readyForFwUpdate = false;
 bool readyForDoorUpdate = false;
+bool registered = false;
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
@@ -85,17 +86,26 @@ void loop() {
   }
 
   client.loop(); //the mqtt function that processes MQTT messages
+  if (! registered) {
+    registerTelemetry();
+    updateTelemetry("Unknown");
+    registered = true;
+  }
 
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
+void callback(char* p_topic, byte* p_payload, unsigned int p_length) {
   String strTopic;
-  //if the 'garage/button' topic has a payload "OPEN", then 'click' the relay
-  payload[length] = '\0';
-  strTopic = String((char*)topic);
+  String payload;
+
+  for (uint8_t i = 0; i < p_length; i++) {
+    payload.concat((char)p_payload[i]);
+  }
+
+  strTopic = String((char*)p_topic);
   if (strTopic == MQTT_HEARTBEAT_TOPIC) {
     resetWatchdog();
-    Serial.println("Heartbeat received");
+    updateTelemetry(payload);
   }
 }
 

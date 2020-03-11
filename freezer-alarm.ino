@@ -13,18 +13,18 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 5000
 #define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.15"
+#define FIRMWARE_VERSION "-1.16"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
 #define MQTT_HEARTBEAT_TOPIC "heartbeat"
-#define MQTT_CHEST_POSITION_TOPIC "sensor/freezer-alarm/chest-position"
-#define MQTT_UPRIGHT_POSITION_TOPIC "sensor/freezer-alarm/upright-position"
+#define CHEST_FREEZER "chest-freezer"
+#define UPRIGHT_FREEZER "upright-freezer"
 #define MQTT_DISCOVERY_BINARY_SENSOR_PREFIX  "homeassistant/binary_sensor/"
 #define MQTT_DISCOVERY_SENSOR_PREFIX  "homeassistant/sensor/"
 #define HA_TELEMETRY                         "ha"
 
-#define WATCHDOG_PIN 5       //  D1
+#define WATCHDOG_PIN 5       // D1
 #define DOOR_CHEST_PIN 13    // D7
 #define DOOR_UPRIGHT_PIN 12  // D6
 
@@ -89,6 +89,8 @@ void loop() {
   if (! registered) {
     registerTelemetry();
     updateTelemetry("Unknown");
+    createBinarySensors(CHEST_FREEZER);
+    createBinarySensors(UPRIGHT_FREEZER);
     registered = true;
   }
 
@@ -115,23 +117,46 @@ void checkDoorState() {
   String upright_position;
   
   if (digitalRead(DOOR_CHEST_PIN) == 0) {
-    chest_position = "Closed";
+    updateBinarySensor(CHEST_FREEZER, "off");
   }
   else {
-    chest_position = "Open"; 
+    updateBinarySensor(CHEST_FREEZER, "on"); 
   }  
 
   if (digitalRead(DOOR_UPRIGHT_PIN) == 0) {
-    upright_position = "Closed";
+    updateBinarySensor(UPRIGHT_FREEZER, "off");
   }
   else {
-    upright_position = "Open"; 
+    updateBinarySensor(UPRIGHT_FREEZER, "on"); 
   }  
 
-  client.publish(MQTT_CHEST_POSITION_TOPIC, chest_position.c_str(), true);
-  client.publish(MQTT_UPRIGHT_POSITION_TOPIC, upright_position.c_str(), true);
 }
 
 void doorStateTickerFunc() {
   readyForDoorUpdate = true;
+}
+
+void createBinarySensors(String sensor) {
+  String topic = String(MQTT_DISCOVERY_BINARY_SENSOR_PREFIX) + sensor + "/config";
+  String message = String("{\"name\": \"") + sensor +
+                   String("\", \"state_topic\": \"") + String(MQTT_DISCOVERY_SENSOR_PREFIX) + sensor +
+                   String("/state\", \"device_class\": \"opening\"}");
+  Serial.print(F("MQTT - "));
+  Serial.print(topic);
+  Serial.print(F(" : "));
+  Serial.println(message.c_str());
+
+  client.publish(topic.c_str(), message.c_str(), true);  
+
+}
+
+void updateBinarySensor(String sensor, String state) {
+  String topic = String(MQTT_DISCOVERY_BINARY_SENSOR_PREFIX) + sensor + "/state";
+  
+  Serial.print(F("MQTT - "));
+  Serial.print(topic);
+  Serial.print(F(" : "));
+  Serial.println(state);
+  client.publish(topic.c_str(), state.c_str(), true);
+
 }

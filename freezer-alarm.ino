@@ -13,13 +13,15 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 5000
 #define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.16"
+#define FIRMWARE_VERSION "-1.21"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
 #define MQTT_HEARTBEAT_TOPIC "heartbeat"
-#define CHEST_FREEZER "chest-freezer"
-#define UPRIGHT_FREEZER "upright-freezer"
+#define CHEST_FREEZER "chest_freezer"
+#define CHEST_FREEZER_NAME "Chest Freezer"
+#define UPRIGHT_FREEZER "upright_freezer"
+#define UPRIGHT_FREEZER_NAME "Upright Freezer"
 #define MQTT_DISCOVERY_BINARY_SENSOR_PREFIX  "homeassistant/binary_sensor/"
 #define MQTT_DISCOVERY_SENSOR_PREFIX  "homeassistant/sensor/"
 #define HA_TELEMETRY                         "ha"
@@ -89,8 +91,8 @@ void loop() {
   if (! registered) {
     registerTelemetry();
     updateTelemetry("Unknown");
-    createBinarySensors(CHEST_FREEZER);
-    createBinarySensors(UPRIGHT_FREEZER);
+    createBinarySensors(CHEST_FREEZER, CHEST_FREEZER_NAME);
+    createBinarySensors(UPRIGHT_FREEZER, UPRIGHT_FREEZER_NAME);
     registered = true;
   }
 
@@ -136,10 +138,10 @@ void doorStateTickerFunc() {
   readyForDoorUpdate = true;
 }
 
-void createBinarySensors(String sensor) {
+void createBinarySensors(String sensor, String sensor_name) {
   String topic = String(MQTT_DISCOVERY_BINARY_SENSOR_PREFIX) + sensor + "/config";
-  String message = String("{\"name\": \"") + sensor +
-                   String("\", \"state_topic\": \"") + String(MQTT_DISCOVERY_SENSOR_PREFIX) + sensor +
+  String message = String("{\"name\": \"") + sensor_name +
+                   String("\", \"state_topic\": \"") + String(MQTT_DISCOVERY_BINARY_SENSOR_PREFIX) + sensor +
                    String("/state\", \"device_class\": \"opening\"}");
   Serial.print(F("MQTT - "));
   Serial.print(topic);

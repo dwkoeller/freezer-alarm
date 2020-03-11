@@ -11,9 +11,9 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define MQTT_PORT 8883 // Enter your MQTT server port.
 #define MQTT_SOCKET_TIMEOUT 120
 #define FW_UPDATE_INTERVAL_SEC 24*3600
-#define DOOR_UPDATE_INTERVAL_MS 5000
+#define DOOR_UPDATE_INTERVAL_MS 500
 #define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.21"
+#define FIRMWARE_VERSION "-1.23"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
@@ -44,6 +44,12 @@ Ticker ticker_fw, tickerDoorState;
 bool readyForFwUpdate = false;
 bool readyForDoorUpdate = false;
 bool registered = false;
+
+String chestState = "";
+String lastChestState = "";
+String uprightState = "";
+String lastUprightState = "";
+
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
@@ -117,21 +123,41 @@ void checkDoorState() {
   //Checks if the door state has changed, and MQTT pub the change
   String chest_position;
   String upright_position;
-  
-  if (digitalRead(DOOR_CHEST_PIN) == 0) {
-    updateBinarySensor(CHEST_FREEZER, "off");
+
+  chestState = getCurrentState(DOOR_CHEST_PIN);
+  if (chestState != lastChestState) {
+    lastChestState = chestState;
+    if(chestState == "Closed") {
+      updateBinarySensor(CHEST_FREEZER, "OFF");
+    }
+    else {
+      updateBinarySensor(CHEST_FREEZER, "ON");
+    }
+  }
+
+  if (uprightState != lastUprightState) {
+    lastUprightState = uprightState;
+    if(uprightState == "Closed") {
+      updateBinarySensor(UPRIGHT_FREEZER, "OFF");
+    }
+    else {
+      updateBinarySensor(UPRIGHT_FREEZER, "ON"); 
+    }
+  }
+
+}
+
+String getCurrentState(int pin) {
+  String state;
+  int val;
+  val = digitalRead(pin);
+  if(val == LOW) {
+    state = "Closed";
   }
   else {
-    updateBinarySensor(CHEST_FREEZER, "on"); 
-  }  
-
-  if (digitalRead(DOOR_UPRIGHT_PIN) == 0) {
-    updateBinarySensor(UPRIGHT_FREEZER, "off");
+    state = "Open";    
   }
-  else {
-    updateBinarySensor(UPRIGHT_FREEZER, "on"); 
-  }  
-
+  return state;
 }
 
 void doorStateTickerFunc() {

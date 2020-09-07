@@ -12,12 +12,12 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define MQTT_SOCKET_TIMEOUT 120
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 500
-#define UPDATE_SERVER "http://192.168.100.15/firmware/"
-#define FIRMWARE_VERSION "-1.23"
+#define FIRMWARE_VERSION "-2.00"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
 #define MQTT_HEARTBEAT_TOPIC "heartbeat"
+#define MQTT_UPDATE_REQUEST "update"
 #define CHEST_FREEZER "chest_freezer"
 #define CHEST_FREEZER_NAME "Chest Freezer"
 #define UPRIGHT_FREEZER "upright_freezer"
@@ -65,6 +65,18 @@ void setup() {
 
   setup_wifi();
 
+  IPAddress result;
+  int err = WiFi.hostByName(MQTT_SERVER, result) ;
+  if(err == 1){
+        Serial.print("MQTT Server IP address: ");
+        Serial.println(result);
+        MQTTServerIP = result.toString();
+  } else {
+        Serial.print("Error code: ");
+        Serial.println(err);
+  }  
+
+  client.setBufferSize(512);  
   client.setServer(MQTT_SERVER, MQTT_PORT); //1883 is the port number you have forwared for mqtt messages. You will need to change this if you've used a different port 
   client.setCallback(callback); //callback is the function that gets called for a topic sub
 
@@ -116,13 +128,14 @@ void callback(char* p_topic, byte* p_payload, unsigned int p_length) {
   if (strTopic == MQTT_HEARTBEAT_TOPIC) {
     resetWatchdog();
     updateTelemetry(payload);
+    if (payload.equals(String(MQTT_UPDATE_REQUEST))) {
+      checkForUpdates();
+    }            
   }
 }
 
 void checkDoorState() {
   //Checks if the door state has changed, and MQTT pub the change
-  String chest_position;
-  String upright_position;
 
   chestState = getCurrentState(DOOR_CHEST_PIN);
   if (chestState != lastChestState) {

@@ -12,7 +12,7 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #define MQTT_SOCKET_TIMEOUT 120
 #define FW_UPDATE_INTERVAL_SEC 24*3600
 #define DOOR_UPDATE_INTERVAL_MS 500
-#define FIRMWARE_VERSION "-2.00"
+#define FIRMWARE_VERSION "-2.01"
 
 /****************************** MQTT TOPICS (change these topics as you wish)  ***************************************/
 #define MQTT_HEARTBEAT_SUB "heartbeat/#"
